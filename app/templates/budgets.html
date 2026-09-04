@@ -1,0 +1,261 @@
+{% extends "base.html" %}
+
+{% block title %}Budgets ? SmartExpense{% endblock %}
+{% block header_title %}Budget Allocation & Thresholds{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
+  <div>
+    <h1 style="font-size: 1.85rem; font-weight: 800; letter-spacing: -0.02em; color: var(--text-primary);">
+      Budget Management
+    </h1>
+    <p style="font-size: 0.94rem; color: var(--text-muted); margin-top: 2px;">
+      Category-level spending ceilings with algorithmic 80% & 100% threshold alerts
+    </p>
+  </div>
+
+  <div style="display: flex; align-items: center; gap: 12px;">
+    <!-- Month / Year Selector -->
+    <div style="display: flex; align-items: center; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 4px 8px;">
+      <i data-lucide="calendar" style="width: 15px; height: 15px; color: var(--text-muted); margin-right: 6px;"></i>
+      <form method="GET" action="{{ url_for('budgets.index') }}" id="budgetPeriodForm" style="margin: 0;">
+        <select name="month" onchange="document.getElementById('budgetPeriodForm').submit()" style="background: none; border: none; color: var(--text-primary); font-family: inherit; font-size: 0.85rem; cursor: pointer; outline: none;">
+          {% for m in range(1, 13) %}
+            <option value="{{ m }}" {% if m == selected_month %}selected{% endif %}>{{ ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][m-1] }}</option>
+          {% endfor %}
+        </select>
+        <select name="year" onchange="document.getElementById('budgetPeriodForm').submit()" style="background: none; border: none; color: var(--text-primary); font-family: inherit; font-size: 0.85rem; cursor: pointer; outline: none; margin-left: 4px;">
+          <option value="{{ selected_year - 1 }}">{{ selected_year - 1 }}</option>
+          <option value="{{ selected_year }}" selected>{{ selected_year }}</option>
+          <option value="{{ selected_year + 1 }}">{{ selected_year + 1 }}</option>
+        </select>
+      </form>
+    </div>
+
+    <button class="btn btn-primary" onclick="openModal('addBudgetModal')">
+      <i data-lucide="plus" style="width: 16px; height: 16px;"></i>
+      <span>Set New Budget</span>
+    </button>
+  </div>
+</div>
+
+<!-- Overall Budget Utilization KPI Card -->
+<div class="card" style="margin-bottom: 26px; padding: 24px;">
+  <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 16px;">
+    <div>
+      <div style="font-size: 0.82rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted);">
+        Overall Monthly Budget Utilization
+      </div>
+      <div style="font-size: 1.6rem; font-weight: 700; color: var(--text-primary); margin-top: 4px;">
+        {{ total_spent | currency }} <span style="font-size: 1rem; color: var(--text-muted); font-weight: 500;">/ {{ total_budgeted | currency }}</span>
+      </div>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 20px; font-size: 0.9rem;">
+      <div>
+        <div style="color: var(--text-muted); font-size: 0.78rem;">Remaining Buffer</div>
+        <div style="font-weight: 700; color: {% if total_remaining >= 0 %}var(--accent-success){% else %}var(--accent-danger){% endif %};">
+          {{ total_remaining | currency }}
+        </div>
+      </div>
+      <div>
+        <div style="color: var(--text-muted); font-size: 0.78rem;">Billing Days Left</div>
+        <div style="font-weight: 700; color: var(--text-primary);">
+          {{ remaining_days }} days
+        </div>
+      </div>
+      <div>
+        <div style="color: var(--text-muted); font-size: 0.78rem;">Status</div>
+        <span class="badge {% if overall_pct > 100 %}badge-danger{% elif overall_pct >= 80 %}badge-warning{% else %}badge-success{% endif %}">
+          {{ overall_pct }}% Utilized
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <div class="progress-track" style="height: 10px; margin: 0;">
+    <div class="progress-fill {% if overall_pct > 100 %}danger{% elif overall_pct >= 80 %}warning{% else %}safe{% endif %}" 
+         style="width: {{ [overall_pct, 100.0]|min }}%;"></div>
+  </div>
+</div>
+
+<!-- Category Budgets Grid -->
+<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; margin-bottom: 30px;">
+  {% for item in budget_items %}
+  <div class="card card-hover" style="padding: 22px;">
+    <!-- Top Row -->
+    <div style="display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 14px;">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <div class="kpi-icon-wrap" style="background: rgba(99, 102, 241, 0.12); color: {{ item.category.color }};">
+          <i data-lucide="{{ item.category.icon }}" style="width: 20px; height: 20px;"></i>
+        </div>
+        <div>
+          <div style="font-size: 1.05rem; font-weight: 700; color: var(--text-primary);">{{ item.category.name }}</div>
+          <div style="font-size: 0.78rem; color: var(--text-muted);">
+            Allocation: {{ item.limit | currency }}
+          </div>
+        </div>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 6px;">
+        <button class="btn btn-secondary btn-sm" onclick="openAdjustBudgetModal({{ item.budget.id }}, '{{ item.category.name }}', {{ item.category.id }}, {{ item.limit }})" title="Adjust Limit" style="padding: 4px 8px;">
+          <i data-lucide="sliders" style="width: 14px; height: 14px;"></i>
+        </button>
+        <button class="btn btn-outline btn-sm" onclick="confirmDeleteBudget({{ item.budget.id }}, '{{ item.category.name }}')" title="Remove" style="padding: 4px 8px; color: var(--accent-danger);">
+          <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Spent vs Limit -->
+    <div style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 6px;">
+      <div style="font-size: 1.35rem; font-weight: 700; color: var(--text-primary);">
+        {{ item.spent | currency }}
+      </div>
+      <div style="font-size: 0.85rem; color: var(--text-muted);">
+        of {{ item.limit | currency }}
+      </div>
+    </div>
+
+    <!-- Progress Bar -->
+    <div class="progress-track">
+      <div class="progress-fill {{ item.state }}" style="width: {{ item.clamped_pct }}%;"></div>
+    </div>
+
+    <!-- Bottom Status & Pacing Alert -->
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 10px; font-size: 0.82rem;">
+      <div>
+        {% if item.remaining >= 0 %}
+        <span style="color: var(--accent-success); font-weight: 600;">
+          {{ item.remaining | currency }} remaining
+        </span>
+        {% else %}
+        <span style="color: var(--accent-danger); font-weight: 600;">
+          Exceeded by {{ item.remaining|abs | currency }}
+        </span>
+        {% endif %}
+      </div>
+
+      <div>
+        {% if item.state == 'danger' %}
+        <span class="badge badge-danger">
+          <i data-lucide="alert-triangle" style="width: 12px; height: 12px;"></i>
+          Exceeded
+        </span>
+        {% elif item.state == 'warning' %}
+        <span class="badge badge-warning">
+          <i data-lucide="alert-circle" style="width: 12px; height: 12px;"></i>
+          {{ item.percentage }}% used
+        </span>
+        {% else %}
+        <span class="badge badge-success">
+          {{ item.percentage }}% used
+        </span>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Burn Rate Projection Hint -->
+    <div style="margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border-color); font-size: 0.76rem; color: var(--text-muted); display: flex; justify-content: space-between;">
+      <span>Projected month-end pace:</span>
+      <strong style="color: {% if item.projected > item.limit %}var(--accent-danger){% else %}var(--text-secondary){% endif %};">
+        {{ item.projected | currency }}
+      </strong>
+    </div>
+  </div>
+  {% else %}
+  <div class="card" style="grid-column: 1 / -1; padding: 50px; text-align: center;">
+    <div class="kpi-icon-wrap rate" style="margin: 0 auto 16px; width: 50px; height: 50px;">
+      <i data-lucide="pie-chart" style="width: 26px; height: 26px;"></i>
+    </div>
+    <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 6px;">No Active Budgets for this Month</h3>
+    <p style="font-size: 0.88rem; color: var(--text-muted); max-width: 440px; margin: 0 auto 20px;">
+      Creating budgets allows the algorithmic insights engine to track your pacing and trigger threshold warnings before you overspend.
+    </p>
+    <button class="btn btn-primary" onclick="openModal('addBudgetModal')">
+      <i data-lucide="plus"></i>
+      <span>Set First Budget</span>
+    </button>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Hidden Delete Form -->
+<form id="deleteBudgetForm" method="POST" style="display: none;"></form>
+
+<!-- Modal: Add New Budget -->
+<div class="modal-overlay" id="addBudgetModal">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <div class="card-title">
+        <i data-lucide="plus-circle" style="color: var(--accent-primary);"></i>
+        <span>Allocate Category Budget</span>
+      </div>
+      <button class="modal-close-btn modal-close-trigger">&times;</button>
+    </div>
+    <form action="{{ url_for('budgets.set_budget') }}" method="POST">
+      <input type="hidden" name="month" value="{{ selected_month }}">
+      <input type="hidden" name="year" value="{{ selected_year }}">
+
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Category *</label>
+          <select name="category_id" class="form-select" required>
+            <option value="">Select Expense Category...</option>
+            {% for c in categories %}
+            <option value="{{ c.id }}">{{ c.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label">Monthly Limit ({{ CURRENCY }}) *</label>
+          <input type="number" step="100" min="100" name="monthly_limit" class="form-control" placeholder="e.g. 8000" required>
+          <div style="font-size: 0.76rem; color: var(--text-muted); margin-top: 4px;">
+            Threshold alerts will trigger automatically at 80% and 100% utilization.
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary modal-close-trigger">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Budget</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Adjust Budget Limit -->
+<div class="modal-overlay" id="adjustBudgetModal">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <div class="card-title">
+        <i data-lucide="sliders" style="color: var(--accent-primary);"></i>
+        <span>Adjust Budget: <span id="adjustCatName"></span></span>
+      </div>
+      <button class="modal-close-btn modal-close-trigger">&times;</button>
+    </div>
+    <form action="{{ url_for('budgets.set_budget') }}" method="POST">
+      <input type="hidden" name="category_id" id="adjustCatId">
+      <input type="hidden" name="month" value="{{ selected_month }}">
+      <input type="hidden" name="year" value="{{ selected_year }}">
+      <input type="hidden" id="adjustBudgetId">
+
+      <div class="modal-body">
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label">New Monthly Limit ({{ CURRENCY }}) *</label>
+          <input type="number" step="100" min="100" name="monthly_limit" id="adjustLimit" class="form-control" required>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary modal-close-trigger">Cancel</button>
+        <button type="submit" class="btn btn-primary">Update Limit</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/budgets.js') }}"></script>
+{% endblock %}

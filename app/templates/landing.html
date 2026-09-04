@@ -1,0 +1,88 @@
+﻿{% extends "base.html" %}
+
+{% block title %}SmartExpense — Personal Financial Analytics Platform{% endblock %}
+
+{% block content %}
+<div style="max-width: 1100px; margin: 40px auto 60px; padding: 0 16px;">
+  <!-- Hero Section -->
+  <div style="text-align: center; margin-bottom: 60px;">
+    <div style="display: inline-flex; align-items: center; gap: 8px; padding: 6px 16px; background: rgba(99, 102, 241, 0.12); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: var(--radius-full); color: #818CF8; font-weight: 600; font-size: 0.82rem; margin-bottom: 24px;">
+      <i data-lucide="sparkles" style="width: 14px; height: 14px;"></i>
+      Next-Generation Financial Intelligence
+    </div>
+
+    <h1 style="font-size: 3.2rem; font-weight: 800; line-height: 1.15; letter-spacing: -0.03em; margin-bottom: 20px; color: var(--text-primary);">
+      Smart<span style="color: var(--accent-primary);">Expense</span>
+    </h1>
+    <p style="font-size: 1.4rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 12px;">
+      The Personal Financial Analytics & Decision-Support Platform
+    </p>
+    <p style="font-size: 1.05rem; color: var(--text-muted); max-width: 680px; margin: 0 auto 36px; line-height: 1.6;">
+      Don't just track expenses. Understand cash flow velocity, anticipate budget overruns, analyze spending spikes, and optimize your personal savings rate with algorithmic precision.
+    </p>
+
+    <div style="display: flex; align-items: center; justify-content: center; gap: 16px; flex-wrap: wrap;">
+      <a href="{{ url_for('auth.login') }}" class="btn btn-primary" style="padding: 12px 28px; font-size: 1rem;">
+        <i data-lucide="log-in"></i>
+        <span>Sign In to Dashboard</span>
+      </a>
+      <a href="{{ url_for('auth.register') }}" class="btn btn-secondary" style="padding: 12px 28px; font-size: 1rem;">
+        <i data-lucide="user-plus"></i>
+        <span>Create Free Account</span>
+      </a>
+    </div>
+
+    <div style="margin-top: 24px; font-size: 0.85rem; color: var(--text-muted);">
+      Pre-loaded with sample demo portfolio • Login as <code>tejasprataps891@gmail.com</code> / <code>admin123</code>
+    </div>
+  </div>
+
+  <!-- Interactive Feature Matrix -->
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; margin-bottom: 60px;">
+    <div class="card card-hover" style="padding: 26px;">
+      <div class="kpi-icon-wrap rate" style="margin-bottom: 18px; width: 44px; height: 44px;">
+        <i data-lucide="activity" style="width: 24px; height: 24px;"></i>
+      </div>
+      <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 8px;">Financial Health Score</h3>
+      <p style="font-size: 0.88rem; color: var(--text-secondary); line-height: 1.5;">
+        A calculated 0–100 financial fitness rating factoring in savings rate, budget discipline, spending growth, and emergency liquidity buffers.
+      </p>
+    </div>
+
+    <div class="card card-hover" style="padding: 26px;">
+      <div class="kpi-icon-wrap savings" style="margin-bottom: 18px; width: 44px; height: 44px;">
+        <i data-lucide="zap" style="width: 24px; height: 24px;"></i>
+      </div>
+      <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 8px;">Smart Insights Engine</h3>
+      <p style="font-size: 0.88rem; color: var(--text-secondary); line-height: 1.5;">
+        Rule-based intelligence that detects month-over-month category spending surges, projects exhaustion dates, and quantifies discretionary savings opportunities.
+      </p>
+    </div>
+
+    <div class="card card-hover" style="padding: 26px;">
+      <div class="kpi-icon-wrap income" style="margin-bottom: 18px; width: 44px; height: 44px;">
+        <i data-lucide="pie-chart" style="width: 24px; height: 24px;"></i>
+      </div>
+      <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 8px;">Pacing & Budget Control</h3>
+      <p style="font-size: 0.88rem; color: var(--text-secondary); line-height: 1.5;">
+        Category-specific monthly limits with dynamic color-shifting threshold alerts at 80% and 100%+ overrun, paired with burn-rate projections.
+      </p>
+    </div>
+  </div>
+
+  <!-- Tech Stack & Architecture Badges -->
+  <div class="card" style="padding: 28px; text-align: center;">
+    <h4 style="font-size: 0.92rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 16px;">
+      Production-Grade Full Stack Architecture
+    </h4>
+    <div style="display: flex; justify-content: center; gap: 12px; flex-wrap: wrap;">
+      <span class="badge" style="background: rgba(255, 255, 255, 0.06); padding: 8px 14px; font-size: 0.84rem;">Python 3.14</span>
+      <span class="badge" style="background: rgba(255, 255, 255, 0.06); padding: 8px 14px; font-size: 0.84rem;">Flask 3.x</span>
+      <span class="badge" style="background: rgba(255, 255, 255, 0.06); padding: 8px 14px; font-size: 0.84rem;">Flask-Login & Werkzeug</span>
+      <span class="badge" style="background: rgba(255, 255, 255, 0.06); padding: 8px 14px; font-size: 0.84rem;">SQLAlchemy ORM</span>
+      <span class="badge" style="background: rgba(255, 255, 255, 0.06); padding: 8px 14px; font-size: 0.84rem;">SQLite3 Relational DB</span>
+      <span class="badge" style="background: rgba(255, 255, 255, 0.06); padding: 8px 14px; font-size: 0.84rem;">Chart.js Visualizations</span>
+    </div>
+  </div>
+</div>
+{% endblock %}

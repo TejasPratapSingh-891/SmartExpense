@@ -1,0 +1,252 @@
+{% extends "base.html" %}
+
+{% block title %}Monthly Financial Report ? SmartExpense{% endblock %}
+{% block header_title %}Monthly Financial Statement & Audit{% endblock %}
+
+{% block content %}
+<!-- Print Header (Visible only when printed or exported to PDF) -->
+<div class="print-header">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+    <div>
+      <h1 style="font-size: 1.8rem; font-weight: 800; color: #0F172A; margin: 0;">SmartExpense</h1>
+      <p style="font-size: 0.9rem; color: #64748B; margin: 2px 0 0;">Personal Financial Analytics & Decision-Support Platform</p>
+    </div>
+    <div style="text-align: right; font-size: 0.85rem; color: #64748B;">
+      <div><strong>Statement Period:</strong> {{ month_name }} {{ selected_year }}</div>
+      <div><strong>Generated:</strong> {{ generated_date }}</div>
+      <div><strong>Account:</strong> {{ current_user.full_name }} ({{ current_user.email }})</div>
+    </div>
+  </div>
+</div>
+
+<!-- On-Screen Action Header -->
+<div class="no-print" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
+  <div>
+    <h1 style="font-size: 1.85rem; font-weight: 800; letter-spacing: -0.02em; color: var(--text-primary);">
+      Financial Reports
+    </h1>
+    <p style="font-size: 0.94rem; color: var(--text-muted); margin-top: 2px;">
+      Audited monthly performance report with itemized transactions and export to PDF
+    </p>
+  </div>
+
+  <div style="display: flex; align-items: center; gap: 12px;">
+    <!-- Selector -->
+    <div style="display: flex; align-items: center; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 4px 8px;">
+      <i data-lucide="calendar" style="width: 15px; height: 15px; color: var(--text-muted); margin-right: 6px;"></i>
+      <form method="GET" action="{{ url_for('reports.index') }}" id="reportPeriodForm" style="margin: 0;">
+        <select name="month" onchange="document.getElementById('reportPeriodForm').submit()" style="background: none; border: none; color: var(--text-primary); font-family: inherit; font-size: 0.85rem; cursor: pointer; outline: none;">
+          {% for m, m_name in months_list %}
+            <option value="{{ m }}" {% if m == selected_month %}selected{% endif %}>{{ m_name }}</option>
+          {% endfor %}
+        </select>
+        <select name="year" onchange="document.getElementById('reportPeriodForm').submit()" style="background: none; border: none; color: var(--text-primary); font-family: inherit; font-size: 0.85rem; cursor: pointer; outline: none; margin-left: 4px;">
+          {% for y in years_list %}
+            <option value="{{ y }}" {% if y == selected_year %}selected{% endif %}>{{ y }}</option>
+          {% endfor %}
+        </select>
+      </form>
+    </div>
+
+    <button class="btn btn-primary" onclick="window.print()">
+      <i data-lucide="printer" style="width: 16px; height: 16px;"></i>
+      <span>Download Report as PDF</span>
+    </button>
+  </div>
+</div>
+
+<!-- Statement Header Card -->
+<div class="card" style="margin-bottom: 24px; padding: 24px;">
+  <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 16px;">
+    <div>
+      <h2 style="font-size: 1.4rem; font-weight: 700; color: var(--text-primary); margin-bottom: 4px;">
+        Monthly Financial Audit: {{ month_name }} {{ selected_year }}
+      </h2>
+      <div style="font-size: 0.85rem; color: var(--text-muted);">
+        Prepared for <strong>{{ current_user.full_name }}</strong> &bull; Generated on {{ generated_date }}
+      </div>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <span class="badge {{ health_score.badge_class }}">
+        Financial Health: {{ health_score.score }}/100 ({{ health_score.grade }})
+      </span>
+    </div>
+  </div>
+
+  <!-- Key Metrics Row -->
+  <div class="kpi-grid" style="margin-bottom: 0;">
+    <div class="kpi-card" style="margin: 0; padding: 16px;">
+      <span class="kpi-title">Income</span>
+      <div class="kpi-value" style="font-size: 1.5rem; color: var(--accent-success);">{{ kpis.income | currency }}</div>
+      <div style="font-size: 0.76rem; color: var(--text-muted);">Total Inflow</div>
+    </div>
+
+    <div class="kpi-card" style="margin: 0; padding: 16px;">
+      <span class="kpi-title">Expenses</span>
+      <div class="kpi-value" style="font-size: 1.5rem; color: var(--accent-danger);">{{ kpis.expense | currency }}</div>
+      <div style="font-size: 0.76rem; color: var(--text-muted);">Total Outflow</div>
+    </div>
+
+    <div class="kpi-card" style="margin: 0; padding: 16px;">
+      <span class="kpi-title">Net Savings</span>
+      <div class="kpi-value" style="font-size: 1.5rem; color: {% if kpis.net_savings >= 0 %}var(--accent-success){% else %}var(--accent-danger){% endif %};">
+        {{ kpis.net_savings | currency }}
+      </div>
+      <div style="font-size: 0.76rem; color: var(--text-muted);">Retained Cash</div>
+    </div>
+
+    <div class="kpi-card" style="margin: 0; padding: 16px;">
+      <span class="kpi-title">Savings Rate</span>
+      <div class="kpi-value" style="font-size: 1.5rem;">{{ kpis.savings_rate }}%</div>
+      <div style="font-size: 0.76rem; color: var(--text-muted);">{{ kpis.rate_status }}</div>
+    </div>
+  </div>
+</div>
+
+<!-- Section: Highlights (Top Category & Largest Expense) -->
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px;">
+  <!-- Top Category -->
+  <div class="card" style="padding: 20px;">
+    <div style="font-size: 0.8rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px;">
+      Top Spending Category
+    </div>
+    {% if category_spending.categories %}
+      {% set top_cat = category_spending.categories[0] %}
+      <div style="display: flex; align-items: center; justify-content: space-between;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span class="category-dot" style="background: {{ top_cat.color }}; width: 12px; height: 12px;"></span>
+          <span style="font-size: 1.25rem; font-weight: 700; color: var(--text-primary);">{{ top_cat.name }}</span>
+        </div>
+        <div style="text-align: right;">
+          <div style="font-size: 1.25rem; font-weight: 700; color: var(--text-primary);">{{ top_cat.amount | currency }}</div>
+          <div style="font-size: 0.78rem; color: var(--text-muted);">{{ top_cat.percentage }}% of total spend</div>
+        </div>
+      </div>
+    {% else %}
+      <div style="color: var(--text-muted);">No category data.</div>
+    {% endif %}
+  </div>
+
+  <!-- Largest Single Expense -->
+  <div class="card" style="padding: 20px;">
+    <div style="font-size: 0.8rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px;">
+      Largest Single Expense
+    </div>
+    {% if burn_rate.highest_expense %}
+      <div style="display: flex; align-items: center; justify-content: space-between;">
+        <div>
+          <div style="font-size: 1.25rem; font-weight: 700; color: var(--text-primary);">{{ burn_rate.highest_expense.title }}</div>
+          <div style="font-size: 0.78rem; color: var(--text-muted);">{{ burn_rate.highest_expense.category_name }} &bull; {{ burn_rate.highest_expense.date }}</div>
+        </div>
+        <div style="text-align: right;">
+          <div style="font-size: 1.25rem; font-weight: 700; color: var(--accent-danger);">-{{ burn_rate.highest_expense.amount | currency }}</div>
+          <div style="font-size: 0.78rem; color: var(--text-muted);">{{ burn_rate.highest_expense.payment_method }}</div>
+        </div>
+      </div>
+    {% else %}
+      <div style="color: var(--text-muted);">No expense records.</div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Section: Budget Compliance Audit -->
+<div class="card" style="margin-bottom: 24px;">
+  <div class="card-header">
+    <div class="card-title">
+      <i data-lucide="shield" style="color: var(--accent-primary);"></i>
+      <span>Budget Discipline & Compliance Audit</span>
+    </div>
+  </div>
+  <div class="table-responsive">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Category</th>
+          <th>Monthly Ceiling</th>
+          <th>Actual Incurred</th>
+          <th>Variance</th>
+          <th style="text-align: right;">Compliance</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for b in budget_audit %}
+        <tr>
+          <td><strong>{{ b.category }}</strong></td>
+          <td>{{ b.limit | currency }}</td>
+          <td>{{ b.spent | currency }}</td>
+          <td style="color: {% if b.variance >= 0 %}var(--accent-success){% else %}var(--accent-danger){% endif %};">
+            {% if b.variance >= 0 %}+{{ b.variance | currency }} surplus{% else %}-{{ b.variance|abs | currency }} overrun{% endif %}
+          </td>
+          <td style="text-align: right;">
+            <span class="badge {% if b.status == 'Within Budget' %}badge-success{% else %}badge-danger{% endif %}">
+              {{ b.status }}
+            </span>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 24px;">
+            No budget limits were set for this period.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Section: Itemized Transactions Ledger -->
+<div class="card">
+  <div class="card-header">
+    <div class="card-title">
+      <i data-lucide="file-text" style="color: var(--accent-primary);"></i>
+      <span>Itemized Transaction Record</span>
+    </div>
+    <div style="font-size: 0.82rem; color: var(--text-muted);">
+      {{ transactions|length }} items recorded
+    </div>
+  </div>
+  <div class="table-responsive">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Description</th>
+          <th>Category</th>
+          <th>Type</th>
+          <th>Payment Method</th>
+          <th style="text-align: right;">Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for tx in transactions %}
+        <tr>
+          <td>{{ tx.date.strftime('%Y-%m-%d') }}</td>
+          <td>
+            <strong>{{ tx.title }}</strong>
+            {% if tx.notes %}<span style="font-size: 0.78rem; color: var(--text-muted); margin-left: 6px;">({{ tx.notes }})</span>{% endif %}
+          </td>
+          <td>{{ tx.category.name if tx.category else 'General' }}</td>
+          <td>
+            <span class="badge {% if tx.type == 'income' %}badge-success{% else %}badge-danger{% endif %}">
+              {{ tx.type|capitalize }}
+            </span>
+          </td>
+          <td>{{ tx.payment_method }}</td>
+          <td style="text-align: right; font-weight: 600;" class="{% if tx.type == 'income' %}amount-income{% else %}amount-expense{% endif %}">
+            {% if tx.type == 'income' %}+{% else %}-{% endif %}{{ tx.amount | currency }}
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 30px;">
+            No transactions found for this period.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

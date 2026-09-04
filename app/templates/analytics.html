@@ -1,0 +1,237 @@
+{% extends "base.html" %}
+
+{% block title %}Analytics ? SmartExpense{% endblock %}
+{% block header_title %}Deep Financial Analytics & Intelligence{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
+  <div>
+    <h1 style="font-size: 1.85rem; font-weight: 800; letter-spacing: -0.02em; color: var(--text-primary);">
+      Financial Analytics
+    </h1>
+    <p style="font-size: 0.94rem; color: var(--text-muted); margin-top: 2px;">
+      Multi-month spending velocity, burn-rate metrics, category concentrations, and health score audit
+    </p>
+  </div>
+
+  <div style="display: flex; align-items: center; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 4px 8px;">
+    <i data-lucide="calendar" style="width: 15px; height: 15px; color: var(--text-muted); margin-right: 6px;"></i>
+    <form method="GET" action="{{ url_for('analytics.index') }}" id="analyticsPeriodForm" style="margin: 0;">
+      <select name="month" onchange="document.getElementById('analyticsPeriodForm').submit()" style="background: none; border: none; color: var(--text-primary); font-family: inherit; font-size: 0.85rem; cursor: pointer; outline: none;">
+        {% for m in range(1, 13) %}
+          <option value="{{ m }}" {% if m == selected_month %}selected{% endif %}>{{ ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][m-1] }}</option>
+        {% endfor %}
+      </select>
+      <select name="year" onchange="document.getElementById('analyticsPeriodForm').submit()" style="background: none; border: none; color: var(--text-primary); font-family: inherit; font-size: 0.85rem; cursor: pointer; outline: none; margin-left: 4px;">
+        <option value="{{ selected_year - 1 }}">{{ selected_year - 1 }}</option>
+        <option value="{{ selected_year }}" selected>{{ selected_year }}</option>
+        <option value="{{ selected_year + 1 }}">{{ selected_year + 1 }}</option>
+      </select>
+    </form>
+  </div>
+</div>
+
+<!-- Section: Calculated Metrics Banner -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 26px;">
+  <!-- Avg Daily Spend -->
+  <div class="card" style="padding: 18px;">
+    <div style="font-size: 0.78rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px;">
+      Average Daily Spend
+    </div>
+    <div style="font-size: 1.5rem; font-weight: 700; color: var(--text-primary);">
+      {{ burn_rate.avg_daily_spend | currency }}
+    </div>
+    <div style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 4px;">
+      across {{ burn_rate.elapsed_days }} active days
+    </div>
+  </div>
+
+  <!-- Projected Month-End Spend -->
+  <div class="card" style="padding: 18px;">
+    <div style="font-size: 0.78rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px;">
+      Projected Month-End
+    </div>
+    <div style="font-size: 1.5rem; font-weight: 700; color: {% if burn_rate.projected_month_end > kpis.income %}var(--accent-danger){% else %}var(--text-primary){% endif %};">
+      {{ burn_rate.projected_month_end | currency }}
+    </div>
+    <div style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 4px;">
+      estimated pace for {{ burn_rate.total_days }} days
+    </div>
+  </div>
+
+  <!-- Highest Single Expense -->
+  <div class="card" style="padding: 18px;">
+    <div style="font-size: 0.78rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px;">
+      Largest Single Outflow
+    </div>
+    <div style="font-size: 1.5rem; font-weight: 700; color: var(--accent-danger);">
+      {% if burn_rate.highest_expense %}
+        {{ burn_rate.highest_expense.amount | currency }}
+      {% else %}
+        {{ 0.0 | currency }}
+      {% endif %}
+    </div>
+    <div style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+      {% if burn_rate.highest_expense %}
+        {{ burn_rate.highest_expense.title }} ({{ burn_rate.highest_expense.category_name }})
+      {% else %}
+        No expenses recorded
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- MoM Spending Velocity -->
+  <div class="card" style="padding: 18px;">
+    <div style="font-size: 0.78rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px;">
+      MoM Spending Velocity
+    </div>
+    <div style="font-size: 1.5rem; font-weight: 700; color: {% if kpis.expense_change <= 0 %}var(--accent-success){% else %}var(--accent-danger){% endif %};">
+      {% if kpis.expense_change > 0 %}+{% endif %}{{ kpis.expense_change }}%
+    </div>
+    <div style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 4px;">
+      vs previous billing cycle
+    </div>
+  </div>
+</div>
+
+<!-- Row 2: 6-Month Historical Comparison Chart -->
+<div class="card" style="margin-bottom: 26px;">
+  <div class="card-header">
+    <div>
+      <div class="card-title">
+        <i data-lucide="bar-chart-2" style="color: var(--accent-primary);"></i>
+        <span>Multi-Month Financial Trend (Income, Expenses, Net Savings)</span>
+      </div>
+      <div class="card-subtitle">Historical performance window across the last 6 months</div>
+    </div>
+  </div>
+  <div class="card-body">
+    <div style="height: 320px; width: 100%;">
+      <canvas id="historicalTrendChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Row 3: Category Analysis & Financial Health Deep-Dive -->
+<div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 24px; margin-bottom: 26px;">
+  <!-- Category Analysis Table & Bars -->
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title">
+          <i data-lucide="pie-chart" style="color: #EC4899;"></i>
+          <span>Category Concentration Audit</span>
+        </div>
+        <div class="card-subtitle">Percentage distribution of spending across sectors</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div style="display: flex; flex-direction: column; gap: 16px;">
+        {% for cat in category_spending.categories %}
+        <div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 0.86rem;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="category-dot" style="background: {{ cat.color }};"></span>
+              <strong style="color: var(--text-primary);">{{ cat.name }}</strong>
+              <span style="color: var(--text-muted); font-size: 0.78rem;">({{ cat.count }} txns)</span>
+            </div>
+            <div>
+              <span style="font-weight: 700; color: var(--text-primary);">{{ cat.amount | currency }}</span>
+              <span style="color: var(--text-muted); margin-left: 6px;">{{ cat.percentage }}%</span>
+            </div>
+          </div>
+          <div class="progress-track" style="height: 8px; margin: 0;">
+            <div class="progress-fill" style="background: {{ cat.color }}; width: {{ cat.percentage }}%;"></div>
+          </div>
+        </div>
+        {% else %}
+        <div style="text-align: center; color: var(--text-muted); padding: 30px;">No category breakdown available.</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Financial Health Score Deep Dive -->
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title">
+          <i data-lucide="shield-check" style="color: {{ health_score.grade_color }};"></i>
+          <span>Financial Health Algorithm</span>
+        </div>
+        <div class="card-subtitle">4-Factor quantitative model evaluation</div>
+      </div>
+      <span class="badge {{ health_score.badge_class }}">{{ health_score.grade }} ({{ health_score.score }}/100)</span>
+    </div>
+    <div class="card-body">
+      <div style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 22px;">
+        <!-- Factor 1: Savings Rate (40%) -->
+        <div>
+          <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 4px;">
+            <span><strong>Savings Rate</strong> (Weight: 40%)</span>
+            <span><strong>{{ health_score.breakdown.savings_rate.score }}</strong> / 40 pts</span>
+          </div>
+          <div style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 4px;">{{ health_score.breakdown.savings_rate.label }}</div>
+          <div class="progress-track" style="margin: 0; height: 6px;">
+            <div class="progress-fill safe" style="width: {{ (health_score.breakdown.savings_rate.score / 40) * 100 }}%;"></div>
+          </div>
+        </div>
+
+        <!-- Factor 2: Budget Discipline (30%) -->
+        <div>
+          <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 4px;">
+            <span><strong>Budget Discipline</strong> (Weight: 30%)</span>
+            <span><strong>{{ health_score.breakdown.budget_discipline.score }}</strong> / 30 pts</span>
+          </div>
+          <div style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 4px;">{{ health_score.breakdown.budget_discipline.label }}</div>
+          <div class="progress-track" style="margin: 0; height: 6px;">
+            <div class="progress-fill warning" style="width: {{ (health_score.breakdown.budget_discipline.score / 30) * 100 }}%;"></div>
+          </div>
+        </div>
+
+        <!-- Factor 3: Spending Growth (20%) -->
+        <div>
+          <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 4px;">
+            <span><strong>Spending Control</strong> (Weight: 20%)</span>
+            <span><strong>{{ health_score.breakdown.spending_growth.score }}</strong> / 20 pts</span>
+          </div>
+          <div style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 4px;">{{ health_score.breakdown.spending_growth.label }}</div>
+          <div class="progress-track" style="margin: 0; height: 6px;">
+            <div class="progress-fill safe" style="width: {{ (health_score.breakdown.spending_growth.score / 20) * 100 }}%;"></div>
+          </div>
+        </div>
+
+        <!-- Factor 4: Cash Buffer (10%) -->
+        <div>
+          <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 4px;">
+            <span><strong>Liquidity & Buffer</strong> (Weight: 10%)</span>
+            <span><strong>{{ health_score.breakdown.income_stability.score }}</strong> / 10 pts</span>
+          </div>
+          <div style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 4px;">{{ health_score.breakdown.income_stability.label }}</div>
+          <div class="progress-track" style="margin: 0; height: 6px;">
+            <div class="progress-fill safe" style="width: {{ (health_score.breakdown.income_stability.score / 10) * 100 }}%;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Actionable Optimization Tips -->
+      <div style="background: var(--bg-input); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 14px;">
+        <div style="font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #818CF8; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+          <i data-lucide="lightbulb" style="width: 14px; height: 14px;"></i>
+          Algorithmic Recommendations
+        </div>
+        <ul style="padding-left: 18px; margin: 0; font-size: 0.82rem; color: var(--text-secondary); line-height: 1.5;">
+          {% for tip in health_score.tips %}
+          <li>{{ tip }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/analytics.js') }}"></script>
+{% endblock %}

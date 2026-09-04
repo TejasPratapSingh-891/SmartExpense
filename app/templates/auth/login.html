@@ -1,0 +1,81 @@
+﻿{% extends "base.html" %}
+
+{% block title %}Sign In — SmartExpense{% endblock %}
+
+{% block content %}
+<div style="max-width: 440px; margin: 40px auto 60px;">
+  <!-- Brand Header -->
+  <div style="text-align: center; margin-bottom: 28px;">
+    <div class="brand-icon-box" style="margin: 0 auto 14px; width: 48px; height: 48px; border-radius: var(--radius-md);">
+      <i data-lucide="activity" style="width: 26px; height: 26px;"></i>
+    </div>
+    <h2 style="font-size: 1.6rem; font-weight: 700; color: var(--text-primary);">Welcome Back</h2>
+    <p style="font-size: 0.88rem; color: var(--text-muted); margin-top: 4px;">Sign in to access your financial analytics</p>
+  </div>
+
+  <div class="card" style="padding: 30px;">
+    <!-- Quick Demo Access Bar -->
+    <div style="background: rgba(99, 102, 241, 0.08); border: 1px dashed rgba(99, 102, 241, 0.3); border-radius: var(--radius-sm); padding: 14px; margin-bottom: 24px; text-align: center;">
+      <div style="font-size: 0.78rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #818CF8; margin-bottom: 8px;">
+        ⚡ Instant Recruiter / Demo Access
+      </div>
+      <button type="button" class="btn btn-primary btn-sm" style="width: 100%;" onclick="fillDemoCredentials()">
+        <i data-lucide="play" style="width: 14px; height: 14px;"></i>
+        <span>Login as Tejas (Demo Portfolio)</span>
+      </button>
+    </div>
+
+    <form action="{{ url_for('auth.login') }}" method="POST" id="loginForm">
+      <div class="form-group">
+        <label class="form-label">Username or Email</label>
+        <input type="text" name="identifier" id="loginIdentifier" class="form-control" placeholder="e.g. tejasprataps891@gmail.com" required>
+      </div>
+
+      <div class="form-group">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <label class="form-label" style="margin-bottom: 0;">Password</label>
+          <span style="font-size: 0.78rem; color: var(--text-muted);">Default: admin123</span>
+        </div>
+        <div style="position: relative;">
+          <input type="password" name="password" id="loginPassword" class="form-control" placeholder="Enter password" required>
+          <button type="button" onclick="togglePasswordVisibility()" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text-muted); cursor: pointer;">
+            <i data-lucide="eye" id="passwordEyeIcon" style="width: 16px; height: 16px;"></i>
+          </button>
+        </div>
+      </div>
+
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px;">
+        <label style="display: flex; align-items: center; gap: 8px; font-size: 0.84rem; color: var(--text-secondary); cursor: pointer;">
+          <input type="checkbox" name="remember" value="1" checked>
+          <span>Remember session</span>
+        </label>
+      </div>
+
+      <button type="submit" class="btn btn-primary" style="width: 100%; padding: 11px;">
+        <i data-lucide="arrow-right" style="width: 18px; height: 18px;"></i>
+        <span>Sign In</span>
+      </button>
+    </form>
+  </div>
+
+  <div style="text-align: center; margin-top: 20px; font-size: 0.88rem; color: var(--text-secondary);">
+    Don't have an account yet? 
+    <a href="{{ url_for('auth.register') }}" style="font-weight: 600;">Create one now</a>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function fillDemoCredentials() {
+  document.getElementById('loginIdentifier').value = 'tejasprataps891@gmail.com';
+  document.getElementById('loginPassword').value = 'admin123';
+  document.getElementById('loginForm').submit();
+}
+
+function togglePasswordVisibility() {
+  const pwd = document.getElementById('loginPassword');
+  pwd.type = pwd.type === 'password' ? 'text' : 'password';
+}
+</script>
+{% endblock %}

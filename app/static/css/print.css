@@ -1,0 +1,71 @@
+﻿/* ==========================================================================
+   SmartExpense Clean Print & PDF Stylesheet
+   ========================================================================== */
+
+@media print {
+  body, html {
+    background: #FFFFFF !important;
+    color: #1E293B !important;
+    font-size: 11pt !important;
+  }
+
+  .sidebar, .topbar, .theme-toggle-btn, .btn, .modal-overlay, .toast-container, .no-print {
+    display: none !important;
+  }
+
+  .main-wrapper {
+    margin-left: 0 !important;
+    width: 100% !important;
+  }
+
+  .page-content {
+    padding: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .card {
+    background: #FFFFFF !important;
+    border: 1px solid #E2E8F0 !important;
+    box-shadow: none !important;
+    page-break-inside: avoid;
+    margin-bottom: 20px !important;
+  }
+
+  .data-table th {
+    background: #F1F5F9 !important;
+    color: #334155 !important;
+    border-bottom: 2px solid #CBD5E1 !important;
+  }
+
+  .data-table td {
+    border-bottom: 1px solid #E2E8F0 !important;
+    color: #1E293B !important;
+  }
+
+  .print-header {
+    display: block !important;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid #E2E8F0;
+  }
+
+  .kpi-grid {
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 12px !important;
+  }
+
+  .kpi-card {
+    border: 1px solid #E2E8F0 !important;
+    box-shadow: none !important;
+    padding: 12px !important;
+  }
+
+  .kpi-value {
+    color: #0F172A !important;
+    font-size: 1.4rem !important;
+  }
+}
+
+.print-header {
+  display: none;
+}

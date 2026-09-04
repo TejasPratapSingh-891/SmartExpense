@@ -1,0 +1,353 @@
+﻿{% extends "base.html" %}
+
+{% block title %}Dashboard — SmartExpense{% endblock %}
+{% block header_title %}Financial Analytics Dashboard{% endblock %}
+
+{% block content %}
+<!-- Top Header Greeting & Action Bar -->
+<div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 26px;">
+  <div>
+    <h1 style="font-size: 1.85rem; font-weight: 800; letter-spacing: -0.02em; color: var(--text-primary);">
+      {{ greeting }}, {{ first_name }}
+    </h1>
+    <p style="font-size: 0.94rem; color: var(--text-muted); margin-top: 2px;">
+      Here's your financial overview for <strong style="color: var(--text-secondary);">{{ kpis.month_name }} {{ kpis.year }}</strong>
+    </p>
+  </div>
+
+  <div style="display: flex; align-items: center; gap: 12px;">
+    <!-- Month / Year Selector -->
+    <div style="display: flex; align-items: center; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 4px 8px;">
+      <i data-lucide="calendar" style="width: 15px; height: 15px; color: var(--text-muted); margin-right: 6px;"></i>
+      <form method="GET" action="{{ url_for('main.dashboard') }}" id="periodFilterForm" style="margin: 0;">
+        <select name="month" onchange="document.getElementById('periodFilterForm').submit()" style="background: none; border: none; color: var(--text-primary); font-family: inherit; font-size: 0.85rem; cursor: pointer; outline: none;">
+          {% for m in range(1, 13) %}
+            <option value="{{ m }}" {% if m == selected_month %}selected{% endif %}>{{ m }} - {{ ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][m-1] }}</option>
+          {% endfor %}
+        </select>
+        <select name="year" onchange="document.getElementById('periodFilterForm').submit()" style="background: none; border: none; color: var(--text-primary); font-family: inherit; font-size: 0.85rem; cursor: pointer; outline: none; margin-left: 4px;">
+          <option value="{{ today.year - 1 }}" {% if selected_year == today.year - 1 %}selected{% endif %}>{{ today.year - 1 }}</option>
+          <option value="{{ today.year }}" {% if selected_year == today.year %}selected{% endif %}>{{ today.year }}</option>
+        </select>
+      </form>
+    </div>
+
+    <button class="btn btn-primary" onclick="openModal('quickAddTxModal')">
+      <i data-lucide="plus"></i>
+      <span>Add Transaction</span>
+    </button>
+  </div>
+</div>
+
+<!-- 4 Executive KPI Cards -->
+<div class="kpi-grid">
+  <!-- Total Income -->
+  <div class="kpi-card card-hover">
+    <div class="kpi-top">
+      <span class="kpi-title">Total Income</span>
+      <div class="kpi-icon-wrap income">
+        <i data-lucide="trending-up" style="width: 20px; height: 20px;"></i>
+      </div>
+    </div>
+    <div class="kpi-value">{{ kpis.income | currency }}</div>
+    <div class="kpi-bottom">
+      <span class="trend-badge {% if kpis.income_change >= 0 %}up-positive{% else %}down-negative{% endif %}">
+        <i data-lucide="{% if kpis.income_change >= 0 %}arrow-up-right{% else %}arrow-down-right{% endif %}" style="width: 12px; height: 12px;"></i>
+        {{ kpis.income_change | abs }}%
+      </span>
+      <span style="color: var(--text-muted);">vs last month</span>
+    </div>
+  </div>
+
+  <!-- Total Spend -->
+  <div class="kpi-card card-hover">
+    <div class="kpi-top">
+      <span class="kpi-title">Total Spend</span>
+      <div class="kpi-icon-wrap expense">
+        <i data-lucide="credit-card" style="width: 20px; height: 20px;"></i>
+      </div>
+    </div>
+    <div class="kpi-value">{{ kpis.expense | currency }}</div>
+    <div class="kpi-bottom">
+      <span class="trend-badge {% if kpis.expense_change <= 0 %}down-positive{% else %}up-negative{% endif %}">
+        <i data-lucide="{% if kpis.expense_change <= 0 %}arrow-down-right{% else %}arrow-up-right{% endif %}" style="width: 12px; height: 12px;"></i>
+        {{ kpis.expense_change | abs }}%
+      </span>
+      <span style="color: var(--text-muted);">vs last month</span>
+    </div>
+  </div>
+
+  <!-- Net Savings -->
+  <div class="kpi-card card-hover">
+    <div class="kpi-top">
+      <span class="kpi-title">Net Savings</span>
+      <div class="kpi-icon-wrap savings">
+        <i data-lucide="piggy-bank" style="width: 20px; height: 20px;"></i>
+      </div>
+    </div>
+    <div class="kpi-value" style="color: var(--accent-success);">{{ kpis.net_savings | currency }}</div>
+    <div class="kpi-bottom">
+      <span class="trend-badge {% if kpis.savings_change >= 0 %}up-positive{% else %}down-negative{% endif %}">
+        <i data-lucide="{% if kpis.savings_change >= 0 %}arrow-up-right{% else %}arrow-down-right{% endif %}" style="width: 12px; height: 12px;"></i>
+        {{ kpis.savings_change | abs }}%
+      </span>
+      <span style="color: var(--text-muted);">retained cash</span>
+    </div>
+  </div>
+
+  <!-- Savings Rate -->
+  <div class="kpi-card card-hover">
+    <div class="kpi-top">
+      <span class="kpi-title">Savings Rate</span>
+      <div class="kpi-icon-wrap rate">
+        <i data-lucide="pie-chart" style="width: 20px; height: 20px;"></i>
+      </div>
+    </div>
+    <div class="kpi-value">{{ kpis.savings_rate }}%</div>
+    <div class="kpi-bottom">
+      <span class="badge badge-{{ kpis.rate_color }}">
+        {{ kpis.rate_status }}
+      </span>
+      <span style="color: var(--text-muted); margin-left: 4px;">
+        {% if kpis.savings_rate_change >= 0 %}↑ {{ kpis.savings_rate_change }}%{% else %}↓ {{ kpis.savings_rate_change | abs }}%{% endif %}
+      </span>
+    </div>
+  </div>
+</div>
+
+<!-- Row 2: Spending Overview Chart & Financial Health Score -->
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px; margin-bottom: 26px;">
+  <!-- Spending Overview Chart -->
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title">
+          <i data-lucide="activity" style="color: var(--accent-primary);"></i>
+          <span>Spending Overview</span>
+        </div>
+        <div class="card-subtitle">Daily expenditure cadence across the billing cycle</div>
+      </div>
+      <div style="display: flex; gap: 6px;">
+        <button id="trendDailyBtn" class="btn btn-primary btn-sm" onclick="switchTrendView('daily')">Daily</button>
+        <button id="trendCumBtn" class="btn btn-outline btn-sm" onclick="switchTrendView('cumulative')">Cumulative</button>
+      </div>
+    </div>
+    <div class="card-body">
+      <div style="height: 280px; width: 100%;">
+        <canvas id="spendingOverviewChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Financial Health Score Card -->
+  <div class="card health-widget">
+    <div class="card-header">
+      <div>
+        <div class="card-title">
+          <i data-lucide="shield-check" style="color: {{ health_score.grade_color }};"></i>
+          <span>Financial Health</span>
+        </div>
+        <div class="card-subtitle">Algorithmic resilience rating</div>
+      </div>
+      <span class="badge {{ health_score.badge_class }}">{{ health_score.grade }}</span>
+    </div>
+    <div class="card-body" style="display: flex; flex-direction: column; justify-content: space-between;">
+      <!-- Circular Gauge -->
+      <div class="health-gauge-container">
+        <div class="score-circle-wrapper">
+          <svg class="score-circle-svg" viewBox="0 0 140 140">
+            <circle class="score-circle-bg" cx="70" cy="70" r="58"></circle>
+            <circle class="score-circle-bar" cx="70" cy="70" r="58"
+                    stroke="{{ health_score.grade_color }}"
+                    stroke-dasharray="364.4"
+                    stroke-dashoffset="{{ 364.4 - (364.4 * health_score.score / 100) }}"></circle>
+          </svg>
+          <div class="score-circle-content">
+            <span class="score-number">{{ health_score.score }}</span>
+            <span class="score-out-of">/ 100</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Health Breakdown Progress -->
+      <div class="health-breakdown-list">
+        <div class="health-item">
+          <span class="health-item-label">Savings Rate (40%)</span>
+          <span class="health-item-val">{{ health_score.breakdown.savings_rate.score }}/40</span>
+        </div>
+        <div class="progress-track" style="margin: 2px 0 8px;">
+          <div class="progress-fill safe" style="width: {{ (health_score.breakdown.savings_rate.score / 40) * 100 }}%;"></div>
+        </div>
+
+        <div class="health-item">
+          <span class="health-item-label">Budget Discipline (30%)</span>
+          <span class="health-item-val">{{ health_score.breakdown.budget_discipline.score }}/30</span>
+        </div>
+        <div class="progress-track" style="margin: 2px 0 8px;">
+          <div class="progress-fill warning" style="width: {{ (health_score.breakdown.budget_discipline.score / 30) * 100 }}%;"></div>
+        </div>
+
+        <div class="health-item">
+          <span class="health-item-label">Spending Growth (20%)</span>
+          <span class="health-item-val">{{ health_score.breakdown.spending_growth.score }}/20</span>
+        </div>
+        <div class="progress-track" style="margin: 2px 0 8px;">
+          <div class="progress-fill safe" style="width: {{ (health_score.breakdown.spending_growth.score / 20) * 100 }}%;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Row 3: Expense Categories Breakdown & Smart Insights -->
+<div style="display: grid; grid-template-columns: 1fr 1.25fr; gap: 24px; margin-bottom: 26px;">
+  <!-- Expense Categories Doughnut & List -->
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title">
+          <i data-lucide="pie-chart" style="color: #EC4899;"></i>
+          <span>Expense Categories</span>
+        </div>
+        <div class="card-subtitle">Spending distribution for this period</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div style="height: 180px; position: relative; margin-bottom: 20px;">
+        <canvas id="categoryDoughnutChart"></canvas>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 12px; max-height: 240px; overflow-y: auto; padding-right: 4px;">
+        {% for cat in category_spending.categories %}
+        <div>
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; font-size: 0.84rem;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="category-dot" style="background-color: {{ cat.color }};"></span>
+              <span style="font-weight: 600; color: var(--text-primary);">{{ cat.name }}</span>
+            </div>
+            <div>
+              <span style="font-weight: 700; color: var(--text-primary);">{{ cat.amount | currency }}</span>
+              <span style="color: var(--text-muted); font-size: 0.78rem; margin-left: 6px;">{{ cat.percentage }}%</span>
+            </div>
+          </div>
+          <div class="progress-track" style="margin: 0; height: 6px;">
+            <div class="progress-fill" style="background-color: {{ cat.color }}; width: {{ cat.percentage }}%;"></div>
+          </div>
+        </div>
+        {% else %}
+        <div style="text-align: center; color: var(--text-muted); padding: 20px 0;">No expense records found.</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Smart Insights Stream -->
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title">
+          <i data-lucide="sparkles" style="color: #818CF8;"></i>
+          <span>Smart Insights</span>
+        </div>
+        <div class="card-subtitle">Algorithmic interpretations of your finances</div>
+      </div>
+      <a href="{{ url_for('analytics.index') }}" class="btn btn-outline btn-sm">Deep Dive →</a>
+    </div>
+    <div class="card-body">
+      <div class="insights-grid">
+        {% for insight in insights %}
+        <div class="insight-card {{ insight.type }}">
+          <div class="insight-icon">
+            <i data-lucide="{{ insight.icon }}" style="width: 20px; height: 20px;"></i>
+          </div>
+          <div class="insight-content">
+            <div class="insight-badge-row">
+              <span class="badge {% if insight.type == 'danger' %}badge-danger{% elif insight.type == 'warning' %}badge-warning{% elif insight.type == 'positive' %}badge-success{% else %}badge-primary{% endif %}">
+                {{ insight.badge }}
+              </span>
+            </div>
+            <div class="insight-title">{{ insight.title }}</div>
+            <div class="insight-desc">{{ insight.message }}</div>
+            {% if insight.action_url %}
+            <a href="{{ insight.action_url }}" style="font-size: 0.78rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
+              <span>{{ insight.action_label }}</span>
+              <i data-lucide="arrow-right" style="width: 12px; height: 12px;"></i>
+            </a>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Row 4: Recent Transactions -->
+<div class="card">
+  <div class="card-header">
+    <div>
+      <div class="card-title">
+        <i data-lucide="clock" style="color: var(--accent-info);"></i>
+        <span>Recent Transactions</span>
+      </div>
+      <div class="card-subtitle">Latest recorded income & expenses</div>
+    </div>
+    <a href="{{ url_for('transactions.index') }}" class="btn btn-outline btn-sm">View All Transactions →</a>
+  </div>
+  <div class="table-responsive">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Transaction</th>
+          <th>Category</th>
+          <th>Payment Method</th>
+          <th>Date</th>
+          <th style="text-align: right;">Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for tx in recent_transactions %}
+        <tr>
+          <td>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <div class="kpi-icon-wrap {% if tx.type == 'income' %}income{% else %}expense{% endif %}" style="width: 32px; height: 32px; border-radius: var(--radius-sm);">
+                <i data-lucide="{{ tx.category.icon if tx.category else 'tag' }}" style="width: 16px; height: 16px;"></i>
+              </div>
+              <div>
+                <div style="font-weight: 600; color: var(--text-primary);">{{ tx.title }}</div>
+                {% if tx.notes %}
+                <div style="font-size: 0.76rem; color: var(--text-muted);">{{ tx.notes }}</div>
+                {% endif %}
+              </div>
+            </div>
+          </td>
+          <td>
+            <span class="category-pill">
+              <span class="category-dot" style="background-color: {{ tx.category.color if tx.category else '#6366F1' }};"></span>
+              {{ tx.category.name if tx.category else 'General' }}
+            </span>
+          </td>
+          <td>{{ tx.payment_method }}</td>
+          <td>{{ tx.date.strftime('%b %d, %Y') }}</td>
+          <td style="text-align: right;">
+            <span class="{% if tx.type == 'income' %}amount-income{% else %}amount-expense{% endif %}">
+              {% if tx.type == 'income' %}+{% else %}-{% endif %} {{ tx.amount | currency }}
+            </span>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 30px;">
+            No transactions found for this cycle. Click "+ Add Transaction" to record one!
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}

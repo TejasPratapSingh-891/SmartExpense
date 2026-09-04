@@ -1,0 +1,57 @@
+﻿{% extends "base.html" %}
+
+{% block title %}Create Account — SmartExpense{% endblock %}
+
+{% block content %}
+<div style="max-width: 480px; margin: 40px auto 60px;">
+  <!-- Brand Header -->
+  <div style="text-align: center; margin-bottom: 28px;">
+    <div class="brand-icon-box" style="margin: 0 auto 14px; width: 48px; height: 48px; border-radius: var(--radius-md);">
+      <i data-lucide="user-plus" style="width: 26px; height: 26px;"></i>
+    </div>
+    <h2 style="font-size: 1.6rem; font-weight: 700; color: var(--text-primary);">Create Your Account</h2>
+    <p style="font-size: 0.88rem; color: var(--text-muted); margin-top: 4px;">Start analyzing your personal cash flow today</p>
+  </div>
+
+  <div class="card" style="padding: 30px;">
+    <form action="{{ url_for('auth.register') }}" method="POST">
+      <div class="form-group">
+        <label class="form-label">Full Name</label>
+        <input type="text" name="full_name" class="form-control" placeholder="e.g. Tejas Sharma" required>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+        <div class="form-group">
+          <label class="form-label">Username</label>
+          <input type="text" name="username" class="form-control" placeholder="e.g. tejas99" required minlength="3">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email Address</label>
+          <input type="email" name="email" class="form-control" placeholder="name@example.com" required>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input type="password" name="password" class="form-control" placeholder="Min. 6 chars" required minlength="6">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Confirm Password</label>
+          <input type="password" name="confirm_password" class="form-control" placeholder="Repeat password" required minlength="6">
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary" style="width: 100%; padding: 11px; margin-top: 8px;">
+        <i data-lucide="check-circle" style="width: 18px; height: 18px;"></i>
+        <span>Register Account</span>
+      </button>
+    </form>
+  </div>
+
+  <div style="text-align: center; margin-top: 20px; font-size: 0.88rem; color: var(--text-secondary);">
+    Already registered? 
+    <a href="{{ url_for('auth.login') }}" style="font-weight: 600;">Sign in here</a>
+  </div>
+</div>
+{% endblock %}
